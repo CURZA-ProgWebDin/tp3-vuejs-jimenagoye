@@ -3,14 +3,12 @@ import PanelPestanas from './PanelPestanas.vue'
 </script>
 
 <template>
-  <main class="contenedor-principal">
     <header class="app-header">
       <h1>Catálogo de Productos Avanzado</h1>
       <p class="subtitulo">TP3 — Ciclo de Vida, Slots y Componentes Dinámicos</p>
     </header>
-
     <PanelPestanas />
-  </main>
+
 </template>
 
 <style>
