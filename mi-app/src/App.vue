@@ -15,7 +15,7 @@ import PanelPestanas from './PanelPestanas.vue'
 
 <style>
 body {
-  background-color: #f6e8ea; /* Tu rosa pastel característico */
+  background-color: #f6e8ea;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
   padding: 20px;

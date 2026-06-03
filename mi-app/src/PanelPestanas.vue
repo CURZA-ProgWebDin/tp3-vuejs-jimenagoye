@@ -1,136 +1,154 @@
 <script setup>
-/* RESPUESTA ENUNCIADO: ¿En qué situación conviene usar KeepAlive y en cuál no?
-  1. CUÁNDO CONVIENE: Conviene cuando el componente de la pestaña realiza operaciones costosas
-     (como llamadas asíncronas, filtrados pesados o cargas de red) o cuando el usuario modifica
-     el estado interno (como abrir el "Ver más info" de una tarjeta o mover el scroll). 
-     Al usar KeepAlive, cuando el usuario cambia de pestaña y vuelve, todo sigue exactamente
-     en su lugar sin recargar ni perder la posición.
-     
-  2. CUÁNDO NO CONVIENE: No conviene si el negocio exige que los datos estén 100% actualizados
-     en tiempo real cada vez que se hace clic en la pestaña, o si el sitio cuenta con decenas 
-     de pestañas extremadamente masivas, ya que KeepAlive retiene los componentes vivos en la 
-     memoria RAM del navegador y podría consumir recursos innecesarios.*/
-
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import TabTodos from './components/tabs/TabTodos.vue'
 import TabElectronica from './components/tabs/TabElectronica.vue'
 import TabPerifericos from './components/tabs/TabPerifericos.vue'
 
-// Usamos un diccionario de componentes como explica Eduardo en clase
-const listaComponentes = {
+const pestañas = {
   Todos: TabTodos,
   Electronica: TabElectronica,
   Perifericos: TabPerifericos
 }
 
-const tabActual = ref('Todos')
-
-const componenteActivo = computed(() => {
-  return listaComponentes[tabActual.value]
-})
+const tabActivo = ref('Todos')
+const slugText = (text) => {
+  return text
+    .toString()
+    .split(/(?=[A-Z])/)
+    .join(" ")
+}
 </script>
 
 <template>
-  <div class="panel-pestanas">
+  <div class="panel-container">
     
-    <div class="botones-container">
-      <button :class="{ activo: tabActual === 'Todos' }" @click="tabActual = 'Todos'">
-        Todos
+    <nav class="barra-pestanas">
+      <button 
+        v-for="(_, nombre) in pestañas" 
+        :key="nombre"
+        :class="['btn-pestana', { activo: tabActivo === nombre }]"
+        @click="tabActivo = nombre"
+      >
+        {{ nombre === 'Electronica' ? 'Electrónica' : nombre === 'Perifericos' ? 'Periféricos' : slugText(nombre) }}
       </button>
-      <button :class="{ activo: tabActual === 'Electronica' }" @click="tabActual = 'Electronica'">
-        Electrónica
-      </button>
-      <button :class="{ activo: tabActual === 'Perifericos' }" @click="tabActual = 'Perifericos'">
-        Periféricos
-      </button>
-    </div>
+    </nav>
 
-    <div class="comparativa-grilla">
-      <div class="columna-ejemplo">
-        <h2 class="titulo-ejemplo">Estado Normal (Sin KeepAlive)</h2>
+    <div class="columnas-layout">
+      <div class="columna">
+        <h3>Estado Normal (Sin KeepAlive)</h3>
         <div class="caja-render">
-          <component :is="componenteActivo" />
+          <Transition name="fade" mode="out-in">
+            <component :is="pestañas[tabActivo]" />
+          </Transition>
+        </div>
+      </div>
+      <div class="columna">
+        <h3>Estado Optimizado (Con KeepAlive)</h3>
+        <div class="caja-render">
+          <Transition name="fade" mode="out-in">
+            <KeepAlive>
+              <component :is="pestañas[tabActivo]" />
+            </KeepAlive>
+          </Transition>
         </div>
       </div>
 
-      <div class="columna-ejemplo">
-        <h2 class="titulo-ejemplo">Estado Optimizado (Con KeepAlive)</h2>
-        <div class="caja-render">
-          <KeepAlive>
-            <component :is="componenteActivo" />
-          </KeepAlive>
-        </div>
-      </div>
     </div>
+
   </div>
 </template>
 
 <style scoped>
-.panel-pestanas {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.panel-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.botones-container {
+.barra-pestanas {
   display: flex;
   justify-content: center;
   gap: 12px;
-  background-color: white;
-  padding: 15px;
+  background-color: #ffffff;
+  padding: 14px;
   border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  margin-bottom: 20px;
 }
 
-button {
+.btn-pestana {
   background-color: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
+  border: 1px solid #eef0f2;
   color: #555;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
   transition: all 0.2s ease;
 }
 
-button:hover {
+.btn-pestana:hover {
   background-color: #ebd3d5;
+  color: #a65b61;
 }
 
-button.activo {
+.btn-pestana.activo {
   background-color: #DBA9AB;
   color: white;
-  border-color: #a65b61;
+  border-color: #DBA9AB;
 }
 
-.comparativa-grilla {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+.columnas-layout {
+  display: flex;
+  gap: 24px;
 }
 
-@media (max-width: 768px) {
-  .comparativa-grilla {
-    grid-template-columns: 1fr;
-  }
-}
-
-.columna-ejemplo {
-  background-color: white;
-  padding: 20px;
+.columna {
+  flex: 1;
+  background-color: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(166, 91, 97, 0.04);
+  border: 1px solid #fcf8f8;
 }
 
-.titulo-ejemplo {
+.columna h3 {
+  text-align: center;
   font-size: 1.1rem;
   color: #4a3b32;
+  margin-top: 0;
+  margin-bottom: 15px;
   border-bottom: 2px solid #f6e8ea;
   padding-bottom: 10px;
-  margin-top: 0;
 }
 
 .caja-render {
   margin-top: 15px;
+  max-height: 450px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.caja-render::-webkit-scrollbar {
+  width: 6px;
+}
+.caja-render::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+.caja-render::-webkit-scrollbar-thumb {
+  background: #DBA9AB;
+  border-radius: 4px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

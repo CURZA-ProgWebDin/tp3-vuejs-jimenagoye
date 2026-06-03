@@ -2,7 +2,6 @@
 import { ref, onMounted, onUpdated, onBeforeUnmount, useTemplateRef } from 'vue'
 import TarjetaProducto from './TarjetaProducto.vue'
 
-// 1. Definición de las Props que pide el enunciado
 const props = defineProps({
   productos: {
     type: Array,
@@ -10,203 +9,260 @@ const props = defineProps({
   }
 })
 
-// Estado de carga y variable para el intervalo del timer
-const cargando = ref(true)
+const box = useTemplateRef('box')
+const listaFiltrada = ref([])
+const cargando = ref(false)
 let timer = null
 
-// 2. Referencia para el contenedor del div usando useTemplateRef
-const box = useTemplateRef('box')
-
-// Función auxiliar para simular el tiempo de red (Promise)
-function esperar(ms) {
+const esperar = (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-// Función asíncrona para simular la carga de los productos
-async function cargarProductos() {
+const cargarProductos = async () => {
   cargando.value = true
-  await esperar(800) // Simula demora de red de 800ms
+  await esperar(800)
+  listaFiltrada.value = [...props.productos]
   cargando.value = false
 }
 
-// 3. Hook onMounted: Carga inicial y polling cada 30 segundos
 onMounted(() => {
   cargarProductos()
-
-  // Inicia el setInterval para simular actualización en segundo plano
+  
   timer = setInterval(() => {
-    console.log('Polling: Actualizando productos de forma asíncrona...')
+    console.log('Polling: Actualizando stock de productos...')
     cargarProductos()
-  }, 30000) // 30 segundos
+  }, 30000)
 })
 
-// 4. Hook onUpdated: Corre el scroll automático al final de la lista
 onUpdated(() => {
   if (box.value) {
     box.value.scrollTop = box.value.scrollHeight
   }
 })
 
-// 5. Hook onBeforeUnmount: Limpieza del intervalo para evitar fugas de memoria
 onBeforeUnmount(() => {
   clearInterval(timer)
-  console.log('ListaProductos desmontado – polling detenido')
+  console.log('ListaProductos desmontado - polling detenido')
 })
 </script>
 
 <template>
-  <div class="contenedor-lista">
-    <div v-if="cargando" class="cargando-mensaje">
-      <div class="spinner"></div>
-      <p>Cargando productos...</p>
+  <div class="lista-container">
+    
+    <div v-if="cargando && listaFiltrada.length === 0" class="mensaje-carga">
+      <span class="spinner">🌸</span> Cargando stock disponible...
     </div>
 
-    <div v-show="!cargando" ref="box" class="lista">
-      <div class="grilla-productos">
-        <TarjetaProducto 
-          v-for="prod in props.productos" 
-          :key="prod.id"
-        >
+    <div v-else ref="box" class="lista-scrollable">
+      <div v-for="(producto, index) in listaFiltrada" :key="producto.id" class="tarjeta-wrapper">
+        
+        <TarjetaProducto v-if="index === 0">
           <template #header>
-            <div class="header-producto">
-              <h3>{{ prod.nombre }}</h3>
-              <span class="badge-cat">{{ prod.categoria }}</span>
-            </div>
+            <h3 class="producto-nombre">{{ producto.nombre }}</h3>
+            <span class="badge-categoria">{{ producto.categoria }}</span>
           </template>
-
+          
           <template #body="{ expandida, toggleExpandir }">
-            <div class="body-producto">
-              <p class="precio-txt">Precio: <strong>${{ prod.precio }}</strong></p>
-              
-              <div v-if="expandida" class="detalles-expandidos">
-                <p><strong>Stock disponible:</strong> {{ prod.stock }} unidades</p>
-                <p class="id-txt">ID Producto: #{{ prod.id }}</p>
-              </div>
-
-              <button @click="toggleExpandir" class="btn-toggle">
-                {{ expandida ? 'Ocultar info 🔼' : 'Ver más info 🔽' }}
-              </button>
+            <p class="producto-precio">Precio: <strong>${{ producto.precio.toLocaleString() }}</strong></p>
+            <button @click="toggleExpandir" class="btn-toggle">
+              {{ expandida ? 'Ocultar info ▲' : 'Ver más info ▼' }}
+            </button>
+            <div v-if="expandida" class="info-extra">
+              <p>Stock disponible: {{ producto.stock }} unidades</p>
             </div>
           </template>
-
+          
           <template #footer>
-            <div class="acciones-producto">
-              <button class="btn-comprar">Agregar al carro</button>
+            <button class="btn-accion primordial">Comprar Ahora</button>
+          </template>
+        </TarjetaProducto>
+
+        <TarjetaProducto v-else-if="index === 1">
+          <template #header>
+            <h3 class="producto-nombre">{{ producto.nombre }}</h3>
+            <span class="badge-categoria">{{ producto.categoria }}</span>
+          </template>
+          
+          <template #body="{ expandida, toggleExpandir }">
+            <p class="producto-precio">Precio: <strong>${{ producto.precio.toLocaleString() }}</strong></p>
+            <button @click="toggleExpandir" class="btn-toggle">
+              {{ expandida ? 'Ocultar info ▲' : 'Ver más info ▼' }}
+            </button>
+            <div v-if="expandida" class="info-extra">
+              <p>Stock disponible: {{ producto.stock }} unidades</p>
             </div>
           </template>
         </TarjetaProducto>
+
+        <TarjetaProducto v-else>
+          <template #header>
+            <h3 class="producto-nombre libre">{{ producto.nombre }}</h3>
+            <span class="badge-categoria">{{ producto.categoria }}</span>
+          </template>
+          
+          <template #body="{ expandida, toggleExpandir }">
+            <div class="bloque-libre">
+              <p class="precio-destacado">Oferta Especial: ${{ producto.precio.toLocaleString() }}</p>
+            </div>
+            <button @click="toggleExpandir" class="btn-toggle-libre">
+              {{ expandida ? 'Menos detalles ▲' : 'Más detalles ▼' }}
+            </button>
+            <div v-if="expandida" class="info-extra-libre">
+              <p>Contamos con {{ producto.stock }} artículos en bodega listos para despacho.</p>
+            </div>
+          </template>
+          
+          <template #footer>
+            <span class="envio-gratis">🚚 Envío bonificado</span>
+          </template>
+        </TarjetaProducto>
+
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Estilos del contenedor con scroll según pide el enunciado */
-.lista {
-  max-height: 450px;    /* Altura máxima obligatoria */
-  overflow-y: auto;     /* Activa el scroll de forma automática */
-  padding: 10px;
-  background-color: #fbf5f6;
-  border-radius: 8px;
-  border: 1px solid #ebd3d5;
+.lista-container {
+  width: 100%;
 }
-
-.grilla-productos {
+.lista-scrollable {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
-/* Diseño del mensaje de cargando */
-.cargando-mensaje {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.mensaje-carga {
+  text-align: center;
   padding: 40px;
-  color: #a65b61;
-  font-weight: bold;
+  color: #ba9496;
+  font-size: 1.1rem;
+  font-style: italic;
+  font-weight: 500;
 }
 
 .spinner {
-  border: 4px solid rgba(219, 169, 171, 0.2);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border-left-color: #DBA9AB;
-  animation: spin 1s linear infinite;
-  margin-bottom: 10px;
+  display: inline-block;
+  animation: rotate 2s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
+@keyframes rotate {
   100% { transform: rotate(360deg); }
 }
 
-/* Detalles estéticos internos */
-.header-producto {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.tarjeta-wrapper {
+  width: 100%;
 }
 
-.header-producto h3 {
-  margin: 0;
-  font-size: 1.1rem;
+.producto-nombre {
+  margin: 0 0 4px 0;
+  font-size: 1.15rem;
   color: #4a3b32;
 }
 
-.badge-cat {
+.producto-nombre.libre {
+  color: #6e5a4f;
+  font-style: italic;
+}
+
+.badge-categoria {
   font-size: 0.75rem;
-  background-color: #DBA9AB;
-  color: white;
-  padding: 3px 8px;
-  border-radius: 12px;
+  background-color: #f6e8ea;
+  color: #a65b61;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: bold;
 }
 
-.body-producto .precio-txt {
-  margin: 5px 0;
-  font-size: 1rem;
+.producto-precio {
+  margin: 6px 0;
+  color: #555;
 }
 
-.detalles-expandidos {
-  background-color: #ffffff;
-  padding: 8px;
-  border-radius: 6px;
-  margin-top: 8px;
-  border-left: 3px solid #DBA9AB;
-  font-size: 0.9rem;
-}
-
-.id-txt {
-  color: #999;
-  font-size: 0.8rem;
-  margin: 3px 0 0 0;
+.precio-destacado {
+  margin: 6px 0;
+  color: #a65b61;
+  font-weight: bold;
 }
 
 .btn-toggle {
   background: none;
   border: none;
-  color: #a65b61;
+  color: #DBA9AB;
   cursor: pointer;
-  font-weight: bold;
   padding: 0;
-  margin-top: 5px;
-}
-
-.btn-comprar {
-  background-color: white;
-  color: #a65b61;
-  border: 1px solid #DBA9AB;
-  padding: 6px 12px;
-  border-radius: 6px;
+  font-size: 0.85rem;
   font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
+  text-decoration: underline;
 }
 
-.btn-comprar:hover {
+.btn-toggle-libre {
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.info-extra {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #fafafa;
+  border-left: 3px solid #DBA9AB;
+  font-size: 0.9rem;
+}
+
+.info-extra-libre {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #fcf8f8;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.btn-accion.primordial {
   background-color: #DBA9AB;
   color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.btn-accion.primordial:hover {
+  background-color: #ebd3d5;
+  color: #a65b61;
+}
+
+.tag-exclusivo {
+  font-size: 0.7rem;
+  background-color: #f0f0f0;
+  color: #666;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.envio-gratis {
+  font-size: 0.85rem;
+  color: #2b8a3e;
+  font-weight: bold;
+}
+.lista-scrollable::-webkit-scrollbar {
+  width: 5px;
+}
+.lista-scrollable::-webkit-scrollbar-track {
+  background: #fdf8f8;
+}
+.lista-scrollable::-webkit-scrollbar-thumb {
+  background: #ebd3d5;
+  border-radius: 10px;
 }
 </style>
